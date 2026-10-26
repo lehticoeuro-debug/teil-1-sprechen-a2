@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fragen zur Person – Kartenspiel</title>
+<style>
+  :root{
+    --bg1:#c9cba3; --bg2:#c9cba3;
+    --card-back1:#ffe1a8; --card-back2:#f9d590;
+    --accent:#e8505b; --accent2:#14b1ab;
+    --text:#3a2e39; --white:#fff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{
+    font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(135deg,var(--bg1),var(--bg2));
+    min-height:100vh;color:var(--text);
+    display:flex;flex-direction:column;align-items:center;
+    padding:18px 16px 40px;
+  }
+  h1{font-size:clamp(1.5rem,5vw,2.3rem);color:var(--text);
+     text-shadow:2px 2px 0 rgba(255,255,255,.5);text-align:center;margin-bottom:4px}
+  .sub{color:var(--text);opacity:.9;font-size:1rem;margin-bottom:16px;text-align:center}
+  .counter{background:rgba(255,255,255,.75);padding:6px 16px;border-radius:999px;
+           font-weight:700;font-size:.95rem;margin-bottom:18px}
+
+  /* Stage */
+  .stage{position:relative;width:min(94vw,420px);height:min(120vw,500px);perspective:1200px;margin-bottom:22px}
+  .deck-card{position:absolute;inset:0;border-radius:22px;
+    background:repeating-linear-gradient(45deg,var(--card-back1) 0 14px,var(--card-back2) 14px 28px);
+    border:6px solid var(--white);box-shadow:0 8px 20px rgba(0,0,0,.18)}
+  .deck-card:nth-child(1){transform:translate(10px,10px) rotate(4deg)}
+  .deck-card:nth-child(2){transform:translate(5px,5px) rotate(2deg)}
+  .deck-card:nth-child(3){transform:rotate(-1deg)}
+  .deck.empty .deck-card{opacity:.25}
+
+  .card{position:absolute;inset:0;transform-style:preserve-3d;
+        transition:transform .8s cubic-bezier(.3,1.4,.5,1);visibility:hidden}
+  .card.show{visibility:visible}
+  .card.drawing{animation:draw .55s ease-out forwards}
+  @keyframes draw{
+    0%{transform:translateY(0) scale(1) rotateY(0)}
+    50%{transform:translateY(-40px) scale(1.06) rotateY(0) rotate(-6deg)}
+    100%{transform:translateY(0) scale(1) rotateY(0)}
+  }
+  .card.flipped{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;border-radius:22px;backface-visibility:hidden;
+        -webkit-backface-visibility:hidden;border:6px solid var(--white);
+        box-shadow:0 12px 28px rgba(0,0,0,.22);display:flex;flex-direction:column;
+        align-items:center;justify-content:center;padding:18px 10px}
+  .back{background:repeating-linear-gradient(45deg,var(--card-back1) 0 14px,var(--card-back2) 14px 28px)}
+  .back span{font-size:4rem}
+  .front{background:#ffe1a8;transform:rotateY(180deg)}
+  .front .label{position:absolute;top:16px;left:0;right:0;text-align:center;
+        font-size:1rem;font-weight:700;color:var(--white);background:var(--accent);
+        margin:0 18px;padding:8px;border-radius:12px;letter-spacing:.5px}
+  .front .word{font-size:2.6rem;font-weight:800;text-align:center;
+        color:var(--text);line-height:1.2;white-space:nowrap;max-width:100%}
+  .front .q{position:absolute;bottom:18px;font-size:2.4rem;opacity:.25;font-weight:900;color:var(--accent)}
+
+  /* Buttons */
+  .btns{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-bottom:18px}
+  button{font-family:inherit;font-size:1.1rem;font-weight:700;border:none;border-radius:16px;
+         padding:14px 26px;cursor:pointer;min-height:54px;
+         box-shadow:0 5px 0 rgba(0,0,0,.18);transition:transform .1s, box-shadow .1s}
+  button:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.18)}
+  button:disabled{opacity:.45;cursor:default}
+  .b-start{background:#e26d5c;color:var(--white);font-size:1.35rem;padding:16px 46px}
+  .b-hint{background:var(--white);color:#e26d5c;border:3px solid #e26d5c}
+  .b-next{background:#e26d5c;color:var(--white)}
+  button{touch-action:manipulation;user-select:none;-webkit-user-select:none}
+  @media (max-width:420px){
+    body{padding:12px 12px 32px}
+    .sub{margin-bottom:10px}
+    .counter{margin-bottom:12px}
+    .btns{width:100%;flex-direction:column;align-items:stretch;gap:10px}
+    .btns button{width:100%;padding:14px 16px}
+    .solution{width:100%;padding:14px 12px 4px}
+    .txt{font-size:1rem}
+  }
+  @media (max-height:640px){
+    .stage{height:min(120vw,500px,55vh);width:min(94vw,420px,44vh)}
+  }
+  .hidden{display:none!important}
+
+  /* Solution panel */
+  .solution{width:min(94vw,560px);background:rgba(255,255,255,.95);border-radius:20px;
+            padding:18px 18px 8px;box-shadow:0 8px 22px rgba(0,0,0,.15);
+            animation:pop .35s ease-out}
+  @keyframes pop{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .solution h2{font-size:1.1rem;color:var(--accent);margin-bottom:12px}
+  .qa{border-left:5px solid var(--accent2);background:#f3fbfa;border-radius:12px;
+      padding:12px 14px;margin-bottom:12px}
+  .line{display:flex;gap:8px;align-items:flex-start;margin:4px 0}
+  .tag{flex:0 0 auto;font-weight:800;width:24px;height:24px;border-radius:50%;
+       display:flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;margin-top:2px}
+  .tag.f{background:var(--accent)} .tag.a{background:var(--accent2)}
+  .txt{flex:1;font-size:1.05rem;line-height:1.45}
+  .txt.question{font-weight:700}
+  .spk{flex:0 0 auto;background:none;border:none;box-shadow:none;font-size:1.25rem;
+       padding:0 4px;min-height:auto;cursor:pointer}
+  .spk:active{transform:scale(.9);box-shadow:none}
+
+  .done{text-align:center;background:rgba(255,255,255,.9);border-radius:20px;padding:18px 22px;
+        margin-bottom:16px;font-size:1.15rem;font-weight:700}
+</style>
+</head>
+<body>
+
+<h1>🎴 Fragen zur Person</h1>
+<div class="sub">Zieh eine Karte und stell eine Frage!</div>
+<div class="counter" id="counter">44 Karten im Stapel</div>
+
+<div class="stage">
+  <div class="deck" id="deck">
+    <div class="deck-card"></div><div class="deck-card"></div><div class="deck-card"></div>
+  </div>
+  <div class="card" id="card">
+    <div class="face back"><span>❓</span></div>
+    <div class="face front">
+      <div class="label">Fragen zur Person</div>
+      <div class="word" id="word"></div>
+      <div class="q">?</div>
+    </div>
+  </div>
+</div>
+
+<div class="done hidden" id="done">🎉 Super! Alle Karten sind gezogen.</div>
+
+<div class="btns">
+  <button class="b-start" id="btnStart">▶ Beginn</button>
+  <button class="b-hint hidden" id="btnHint">💡 Lösungsvorschlag</button>
+  <button class="b-next hidden" id="btnNext">Nächste Karte ➜</button>
+  <button class="b-start hidden" id="btnReset">🔄 Neu mischen</button>
+</div>
+
+<div class="solution hidden" id="solution"></div>
+
+<script>
+const CARDS = [
+ {w:"Alter", qa:[
+  ["Wie alt bist du?","Ich bin 15 Jahre alt. Im Mai werde ich 16."],
+  ["Wie alt sind deine Eltern?","Mein Vater ist 45 Jahre alt. Meine Mutter ist 42."]]},
+ {w:"Lieblingsfach", qa:[
+  ["Was ist dein Lieblingsfach?","Mein Lieblingsfach ist Mathe. Ich finde Zahlen interessant."]]},
+ {w:"tanzen", qa:[
+  ["Tanzt du gern?","Ja, ich tanze sehr gern. Ich tanze zweimal pro Woche in einer Tanzschule."],
+  ["Welchen Tanzstil tanzt du?","Ich tanze am liebsten Hip-Hop. Manchmal tanze ich auch Salsa mit meiner Schwester."]]},
+ {w:"Geschwister", qa:[
+  ["Hast du Geschwister?","Ja, ich habe einen Bruder und eine Schwester. Mein Bruder ist 10 und meine Schwester ist 18."],
+  ["Wie heißt dein Bruder?","Mein Bruder heißt Minh. Er geht noch in die Grundschule."]]},
+ {w:"schwimmen", qa:[
+  ["Kannst du schwimmen?","Ja, ich kann gut schwimmen. Ich habe es mit 7 Jahren gelernt."],
+  ["Wie oft gehst du schwimmen?","Ich gehe jeden Samstag schwimmen. Im Sommer schwimme ich auch im Meer."]]},
+ {w:"Sprache", qa:[
+  ["Welche Sprachen sprichst du?","Ich spreche Vietnamesisch und Englisch. Jetzt lerne ich auch Deutsch."],
+  ["Warum lernst du Deutsch?","Ich möchte in Deutschland studieren. Deutsch ist auch eine schöne Sprache."]]},
+ {w:"Geburtstag", qa:[
+  ["Wann hast du Geburtstag?","Ich habe am 12. März Geburtstag. Dann mache ich immer eine kleine Party."],
+  ["Wie feierst du deinen Geburtstag?","Ich feiere mit meiner Familie und meinen Freunden. Wir essen zusammen Kuchen."]]},
+ {w:"Wohnort", qa:[
+  ["Wo wohnst du?","Ich wohne in Hanoi. Hanoi ist die Hauptstadt von Vietnam."],
+  ["Wohnst du gern in Hanoi?","Ja, ich wohne sehr gern hier. Aber es gibt sehr viel Verkehr."]]},
+ {w:"Frühstück", qa:[
+  ["Was isst du zum Frühstück?","Ich esse oft Phở oder Brot. Dazu trinke ich ein Glas Milch."],
+  ["Frühstückst du jeden Tag?","Ja, ich frühstücke jeden Morgen um halb sieben. Am Wochenende frühstücke ich später."]]},
+ {w:"Adresse", qa:[
+  ["Wie ist deine Adresse?","Ich wohne in der Hang-Bong-Straße Nummer 25. Das ist in Hanoi."]]},
+ {w:"Tee", qa:[
+  ["Trinkst du gern Tee?","Ja, ich trinke gern Tee. Am liebsten trinke ich grünen Tee mit meinem Opa."],
+  ["Wann trinkst du Tee?","Ich trinke Tee am Nachmittag. Im Sommer trinke ich lieber Eistee."]]},
+ {w:"Bücher lesen", qa:[
+  ["Liest du gern Bücher?","Ja, ich lese sehr gern. Ich lese jeden Abend vor dem Schlafen."],
+  ["Was für Bücher liest du gern?","Ich lese gern Krimis und Comics. Romane finde ich manchmal langweilig."]]},
+ {w:"Klasse", qa:[
+  ["In welche Klasse gehst du?","Ich gehe in die 10. Klasse. Nächstes Jahr bin ich in der 11. Klasse."],
+  ["Wie viele Schüler sind in deiner Klasse?","In meiner Klasse sind 40 Schüler. Wir haben 22 Mädchen und 18 Jungen."]]},
+ {w:"Freizeit", qa:[
+  ["Was machst du in deiner Freizeit?","In meiner Freizeit spiele ich Badminton. Ich treffe auch gern meine Freunde."],
+  ["Hast du viel Freizeit?","Nein, ich habe nicht viel Freizeit. Ich lerne viel für die Schule."]]},
+ {w:"Schule", qa:[
+  ["Wie heißt deine Schule?","Meine Schule heißt Chu-Van-An-Gymnasium. Sie ist sehr groß und alt."],
+  ["Wann beginnt die Schule?","Die Schule beginnt um 7 Uhr. Um halb zwölf ist sie zu Ende."]]},
+ {w:"Reisen", qa:[
+  ["Reist du gern?","Ja, ich reise sehr gern. Ich möchte einmal nach Deutschland fahren."],
+  ["Wohin reist du in den Ferien?","Wir fahren oft nach Da Nang. Dort gehen wir an den Strand."]]},
+ {w:"Lieblingsessen", qa:[
+  ["Was ist dein Lieblingsessen?","Mein Lieblingsessen ist Bún chả. Meine Mutter kocht es sehr gut."]]},
+ {w:"Hobby", qa:[
+  ["Was ist dein Hobby?","Mein Hobby ist Fotografieren. Ich mache gern Fotos von der Natur."],
+  ["Wie oft machst du dein Hobby?","Ich mache das fast jeden Tag. Am Wochenende habe ich mehr Zeit dafür."]]},
+ {w:"Sport", qa:[
+  ["Machst du gern Sport?","Ja, ich mache gern Sport. Ich spiele Fußball und Basketball."],
+  ["Welchen Sport magst du nicht?","Ich mag Joggen nicht. Das finde ich langweilig."]]},
+ {w:"Lieblingsmusik", qa:[
+  ["Was ist deine Lieblingsmusik?","Meine Lieblingsmusik ist Popmusik. Ich höre auch gern K-Pop."]]},
+ {w:"Computer", qa:[
+  ["Hast du einen Computer?","Ja, ich habe einen Laptop. Ich brauche ihn für die Hausaufgaben."],
+  ["Wie lange bist du am Computer?","Ich bin jeden Tag etwa zwei Stunden am Computer. Am Wochenende spiele ich auch Computerspiele."]]},
+ {w:"Haustier", qa:[
+  ["Hast du ein Haustier?","Ja, ich habe einen Hund. Er heißt Lucky und ist drei Jahre alt."],
+  ["Welches Tier möchtest du haben?","Ich möchte gern eine Katze haben. Aber meine Mutter mag keine Katzen."]]},
+ {w:"Kino", qa:[
+  ["Gehst du gern ins Kino?","Ja, ich gehe gern ins Kino. Ich sehe am liebsten Actionfilme."],
+  ["Mit wem gehst du ins Kino?","Ich gehe meistens mit meinen Freunden ins Kino. Wir essen dort immer Popcorn."]]},
+ {w:"Familie", qa:[
+  ["Wie groß ist deine Familie?","Meine Familie ist nicht so groß. Wir sind vier Personen."],
+  ["Was machst du gern mit deiner Familie?","Am Sonntag essen wir zusammen. Manchmal machen wir auch einen Ausflug."]]},
+ {w:"Gemüse", qa:[
+  ["Isst du gern Gemüse?","Ja, ich esse gern Gemüse. Am liebsten esse ich Karotten und Tomaten."],
+  ["Welches Gemüse magst du nicht?","Ich mag keine Zwiebeln. Die schmecken mir nicht."]]},
+ {w:"Internet", qa:[
+  ["Wie oft bist du im Internet?","Ich bin jeden Tag im Internet. Ich chatte mit Freunden und sehe Videos."],
+  ["Was machst du im Internet?","Ich suche Informationen für die Schule. Ich höre auch Musik online."]]},
+ {w:"Obst", qa:[
+  ["Welches Obst isst du gern?","Ich esse gern Mangos und Bananen. Im Sommer esse ich viel Wassermelone."],
+  ["Isst du jeden Tag Obst?","Ja, ich esse jeden Tag einen Apfel. Obst ist gesund."]]},
+ {w:"Fernsehen", qa:[
+  ["Siehst du gern fern?","Nein, ich sehe nicht so gern fern. Ich sehe lieber Videos auf dem Handy."],
+  ["Was siehst du gern im Fernsehen?","Ich sehe gern Sportsendungen. Mein Vater und ich sehen zusammen Fußball."]]},
+ {w:"Opa und Omas", qa:[
+  ["Besuchst du oft deine Opas und Omas?","Ja, ich besuche sie jeden Monat. Sie wohnen auf dem Land."],
+  ["Was machst du mit deinem Opa und deiner Oma?","Mit meinem Opa spiele ich Schach. Meine Oma kocht immer etwas Leckeres für mich."]]},
+ {w:"Handy", qa:[
+  ["Hast du ein Handy?","Ja, ich habe ein Handy. Ich habe es zum Geburtstag bekommen."],
+  ["Was machst du mit deinem Handy?","Ich schreibe Nachrichten und telefoniere mit meinen Freunden. Ich mache auch viele Fotos."]]},
+ {w:"Sommerferien", qa:[
+  ["Was machst du in den Sommerferien?","Ich fahre mit meiner Familie ans Meer. Wir bleiben eine Woche in Nha Trang."],
+  ["Wie lange dauern die Sommerferien?","Die Sommerferien dauern fast drei Monate. Sie beginnen Ende Mai."]]},
+ {w:"Flugzeug", qa:[
+  ["Bist du schon mal mit dem Flugzeug geflogen?","Ja, ich bin schon zweimal mit dem Flugzeug geflogen. Einmal nach Ho-Chi-Minh-Stadt und einmal nach Bangkok."],
+  ["Fliegst du gern?","Nein, ich fliege nicht gern. Ich habe ein bisschen Angst."]]},
+ {w:"Eis", qa:[
+  ["Isst du gern Eis?","Ja, ich esse sehr gern Eis. Am liebsten mag ich Schokoladeneis."],
+  ["Wann isst du Eis?","Ich esse oft im Sommer Eis. Im Winter esse ich nur selten Eis."]]},
+ {w:"Schokolade", qa:[
+  ["Magst du Schokolade?","Ja, ich liebe Schokolade. Ich esse jeden Tag ein Stück."],
+  ["Welche Schokolade isst du am liebsten?","Ich esse am liebsten Milchschokolade. Dunkle Schokolade ist mir zu bitter."]]},
+ {w:"Fahrrad", qa:[
+  ["Hast du ein Fahrrad?","Ja, ich habe ein rotes Fahrrad. Ich fahre damit zur Schule."],
+  ["Fährst du gern Fahrrad?","Ja, ich fahre sehr gern Fahrrad. Am Wochenende fahre ich mit meinem Vater um den See."]]},
+ {w:"Freunde", qa:[
+  ["Hast du viele Freunde?","Ja, ich habe viele Freunde. Mein bester Freund heißt Nam."],
+  ["Was machst du mit deinen Freunden?","Wir gehen zusammen ins Café. Manchmal spielen wir auch Fußball."]]},
+ {w:"Wochenende", qa:[
+  ["Was machst du am Wochenende?","Am Samstag schlafe ich lange. Am Sonntag treffe ich meine Freunde."],
+  ["Lernst du auch am Wochenende?","Ja, am Sonntagabend mache ich meine Hausaufgaben. Am Samstag habe ich auch einen Deutschkurs."]]},
+ {w:"Hausaufgaben", qa:[
+  ["Hast du viele Hausaufgaben?","Ja, ich habe jeden Tag viele Hausaufgaben. Ich brauche etwa zwei Stunden dafür."],
+  ["Wann machst du deine Hausaufgaben?","Ich mache meine Hausaufgaben am Abend. Nach dem Abendessen setze ich mich an den Schreibtisch."]]},
+ {w:"Winter", qa:[
+  ["Magst du den Winter?","Ja, ich mag den Winter. Es ist nicht so heiß wie im Sommer."],
+  ["Was machst du im Winter?","Im Winter trinke ich viel Kakao. Ich bleibe auch gern zu Hause."]]},
+ {w:"Konzert", qa:[
+  ["Gehst du gern ins Konzert?","Ja, ich gehe gern ins Konzert. Live-Musik finde ich super."],
+  ["Warst du schon mal auf einem Konzert?","Ja, ich war letztes Jahr auf einem Konzert in Hanoi. Es war sehr laut und toll."]]},
+ {w:"Singen", qa:[
+  ["Singst du gern?","Ja, ich singe gern. Ich singe oft Karaoke mit meinen Freunden."],
+  ["Was singst du?","Ich singe gern Popsongs auf Englisch. Manchmal singe ich auch vietnamesische Lieder."]]},
+ {w:"Taschengeld", qa:[
+  ["Bekommst du Taschengeld?","Ja, ich bekomme Taschengeld von meinen Eltern. Ich bekomme 200.000 Dong pro Woche."],
+  ["Was kaufst du mit deinem Taschengeld?","Ich kaufe Snacks und Bubble Tea. Manchmal spare ich auch für ein neues Buch."]]},
+ {w:"Wohnung", qa:[
+  ["Wie ist deine Wohnung?","Meine Wohnung ist klein, aber gemütlich. Sie hat drei Zimmer und einen Balkon."],
+  ["In welchem Stock ist deine Wohnung?","Meine Wohnung ist im fünften Stock. Zum Glück haben wir einen Aufzug."]]},
+ {w:"Spazieren gehen", qa:[
+  ["Gehst du gern spazieren?","Ja, ich gehe gern spazieren. Am Abend gehe ich oft mit meinem Hund im Park spazieren."],
+  ["Wo gehst du spazieren?","Ich gehe am liebsten am Hoan-Kiem-See spazieren. Dort ist es sehr schön."]]}
+];
+
+const $ = id => document.getElementById(id);
+const card=$("card"), word=$("word"), sol=$("solution"), deck=$("deck"), counter=$("counter");
+const btnStart=$("btnStart"), btnHint=$("btnHint"), btnNext=$("btnNext"), btnReset=$("btnReset"), done=$("done");
+let pile=[], current=null, busy=false;
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function resetPile(){pile=shuffle(CARDS.map((_,i)=>i));updateCounter()}
+function updateCounter(){
+  const drawn=CARDS.length-pile.length;
+  counter.textContent = drawn===0 ? `${CARDS.length} Karten im Stapel` : `Karte ${drawn} / ${CARDS.length}`;
+  deck.classList.toggle("empty", pile.length===0);
+}
+
+/* Chữ luôn nằm trên một hàng: thu nhỏ cỡ chữ đến khi vừa chiều rộng thẻ */
+function fitWord(){
+  const front=word.parentElement;
+  const cs=getComputedStyle(front);
+  const avail=front.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+  let size=42;                       // px, cỡ tối đa
+  word.style.fontSize=size+"px";
+  while(word.scrollWidth>avail && size>14){
+    size-=1; word.style.fontSize=size+"px";
+  }
+}
+window.addEventListener("resize",()=>{if(current) fitWord()});
+
+function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+
+function draw(){
+  if(busy || pile.length===0) return;
+  busy=true;
+  sol.classList.add("hidden");
+  btnHint.textContent="💡 Lösungsvorschlag";
+  current=CARDS[pile.pop()];
+  // reset card face-down
+  card.classList.remove("flipped","drawing");
+  card.classList.add("show");
+  void card.offsetWidth;
+  setTimeout(()=>{word.textContent=current.w;fitWord()},250);
+  card.classList.add("drawing");
+  setTimeout(()=>{card.classList.remove("drawing");card.classList.add("flipped")},560);
+  setTimeout(()=>{busy=false;afterDraw()},1350);
+  btnStart.classList.add("hidden");
+  btnHint.classList.add("hidden");btnNext.classList.add("hidden");
+}
+
+function afterDraw(){
+  updateCounter();
+  btnHint.classList.remove("hidden");
+  if(pile.length>0){btnNext.classList.remove("hidden")}
+  else{done.classList.remove("hidden");btnReset.classList.remove("hidden")}
+}
+
+function toggleHint(){
+  if(!current) return;
+  if(!sol.classList.contains("hidden")){
+    sol.classList.add("hidden");btnHint.textContent="💡 Lösungsvorschlag";return;
+  }
+  let html=`<h2>💡 Lösungsvorschlag: ${esc(current.w)}</h2>`;
+  current.qa.forEach(([q,a])=>{
+    html+=`<div class="qa">
+      <div class="line"><span class="tag f">F</span><span class="txt question">${esc(q)}</span><button class="spk" data-t="${esc(q)}" aria-label="Vorlesen">🔊</button></div>
+      <div class="line"><span class="tag a">A</span><span class="txt">${esc(a)}</span><button class="spk" data-t="${esc(a)}" aria-label="Vorlesen">🔊</button></div>
+    </div>`;
+  });
+  sol.innerHTML=html;
+  sol.classList.remove("hidden");
+  btnHint.textContent="🙈 Ausblenden";
+  sol.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+/* Text-to-Speech (Deutsch) */
+let deVoice=null;
+function pickVoice(){
+  if(!("speechSynthesis" in window)) return;
+  const v=speechSynthesis.getVoices();
+  deVoice=v.find(x=>x.lang==="de-DE")||v.find(x=>x.lang&&x.lang.startsWith("de"))||null;
+}
+if("speechSynthesis" in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
+sol.addEventListener("click",e=>{
+  const b=e.target.closest(".spk"); if(!b||!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(b.dataset.t);
+  u.lang="de-DE"; u.rate=0.9; if(deVoice) u.voice=deVoice;
+  speechSynthesis.speak(u);
+});
+
+btnStart.onclick=draw;
+btnNext.onclick=draw;
+btnHint.onclick=toggleHint;
+btnReset.onclick=()=>{
+  resetPile(); current=null;
+  card.classList.remove("show","flipped");
+  sol.classList.add("hidden"); done.classList.add("hidden");
+  btnReset.classList.add("hidden"); btnHint.classList.add("hidden"); btnNext.classList.add("hidden");
+  btnStart.classList.remove("hidden");
+};
+
+resetPile();
+</script>
+</body>
+</html>
